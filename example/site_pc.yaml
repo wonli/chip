@@ -1,0 +1,25 @@
+model: pc
+htmlPath: ../html/pc
+staticRes: "tpls/static"
+baseRoute: "/pc"
+baseLinkPath: "."
+routes:
+  - name: index
+    route: "/"
+    template: "tpls/index.html"
+
+  - name: detail
+    route: "/ai/{id:\\d+}.html"
+    template: "tpls/detail.html"
+
+  - name: tags
+    route: "/tags.html"
+    template: "tpls/tags.html"
+
+  - name: tag
+    route: "/tag/{tag_id}.html"
+    template: "tpls/tag.html"
+
+  - name: about
+    route: "/about.html"
+    template: "tpls/about.html"
