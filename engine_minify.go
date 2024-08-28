@@ -18,7 +18,14 @@ func minifyInit(conf *sites) *minify.M {
 	}
 
 	m := minify.New()
-	m.AddFunc("text/html", html.Minify)
+	m.Add("text/html", &html.Minifier{
+		KeepQuotes:              true,
+		KeepDocumentTags:        true,
+		KeepConditionalComments: true,
+		KeepSpecialComments:     true,
+		KeepEndTags:             true,
+	})
+
 	m.AddFunc("image/svg+xml", svg.Minify)
 	m.AddFunc("text/css", css.Minify)
 	m.AddFuncRegexp(regexp.MustCompile("^(application|text)/(x-)?(java|ecma)script$"), js.Minify)
