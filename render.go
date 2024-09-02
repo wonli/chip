@@ -24,6 +24,7 @@ func render(route *Route) {
 		loops := make(Loop)
 		route.DataSource.Looper(&loops)
 		if len(loops) > 0 {
+			route.LoopCount = len(loops)
 			for p, fn := range loops {
 				fn(route.DataSource)
 

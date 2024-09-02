@@ -18,6 +18,8 @@ type Route struct {
 	HtmlFile    string //生成的html文件相对路径
 	HtmlAbsFile string //生成的html绝对路径
 
+	LoopCount int //循环次数
+
 	Event      *Event
 	Sites      *sites
 	DataSource *DataSource
