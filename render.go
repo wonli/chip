@@ -16,17 +16,17 @@ func render(route *Route) {
 	}
 
 	if strings.Contains(route.urlRule, "%s") {
-		if route.DataSource.Looper == nil {
+		if route.Looper == nil {
 			log.Panicln("未定义循环处理对象")
 			return
 		}
 
 		loops := make(Loop)
-		route.DataSource.Looper(&loops)
+		route.Looper(&loops)
 		if len(loops) > 0 {
-			route.LoopCount = len(loops)
+			route.Event.loopCount = len(loops)
 			for p, fn := range loops {
-				fn(route.DataSource)
+				fn(route)
 
 				routeGenFile := fmt.Sprintf(route.urlRule, fmt.Sprintf("%s", p))
 				route.genFile = routeGenFile
@@ -116,10 +116,15 @@ func renderFile(route *Route, distPath string) {
 	route.HtmlAbsFile = distPath
 	route.HtmlFile = filepath.Join(route.Sites.HtmlPath, route.genFile)
 
-	// 更新站点文件统计
-	route.Sites.GenFileSize += fi.Size()
-	route.Sites.GenFileNumber++
+	// 更新生成数据
+	route.Event.genCount++
+	route.Event.genFileSize += fi.Size()
+	route.Event.genFiles = append(route.Event.genFiles, genFile{
+		path: distPath,
+		file: route.HtmlFile,
+		size: route.HtmlSize,
+	})
 
 	// 回调
-	route.Sites.callbacks.Call(CallbackGen, route)
+	route.Sites.callbacks.Call(CallbackGen, route.Event)
 }

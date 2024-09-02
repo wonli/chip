@@ -2,41 +2,29 @@ package chip
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 	"os"
-	"time"
+	"sync"
 
 	"github.com/CloudyKit/jet/v6"
 	"gopkg.in/yaml.v3"
 )
 
 type Chip struct {
-	route  map[string]func(s *DataSource)
+	route  map[string]func(s *Route)
 	render map[string]any
 	filter map[string]jet.Func
 
 	Events chan *Event
 
 	inited bool
-	routes map[string]*Route
 	config *sites
-}
-
-type Event struct {
-	Route   string
-	Request *http.Request
-	Params  H
 }
 
 func Use() *Chip {
 	c := &Chip{
-		route: make(map[string]func(s *DataSource)),
-
+		route:  make(map[string]func(s *Route)),
 		Events: make(chan *Event, 1024),
-
 		render: make(map[string]any),
-		routes: make(map[string]*Route),
 	}
 
 	return c
@@ -70,11 +58,11 @@ func (c *Chip) AddFilter(key string, fn jet.Func) {
 	c.render[key] = fn
 }
 
-func (c *Chip) Route(name string, fn func(s *DataSource)) {
+func (c *Chip) Route(name string, fn func(s *Route)) {
 	c.route[name] = fn
 }
 
-func (c *Chip) On(t CallbackType, fn func(r *Route)) {
+func (c *Chip) On(t CallbackType, fn func(r *Event)) {
 	c.config.callbacks.Set(t, fn)
 }
 
@@ -101,28 +89,38 @@ func (c *Chip) Gen(event *Event) error {
 		return err
 	}
 
-	t1 := time.Now()
-	if event != nil {
-		r, ok := c.routes[event.Route]
-		if !ok {
-			return fmt.Errorf("不支持的Route:%s", event.Route)
+	var wg sync.WaitGroup
+	for _, route := range c.config.Routes {
+		r := Route{
+			Name:     route.Name,
+			Route:    route.Route,
+			Template: route.Template,
+			Event:    &Event{},
 		}
 
-		r.Event = event
-		r.DataSource.Request = event.Request
-		render(r)
-	} else {
-		for _, r := range c.routes {
-			render(r)
+		r.Init(c.config)
+		if event != nil {
+			if route.Name != event.Route {
+				continue
+			}
+
+			r.Event = event
+			r.DataSource.Request = event.Request
 		}
+
+		wg.Add(1)
+		go func() {
+			if fn, ok := c.route[r.Name]; ok {
+				fn(&r)
+			}
+
+			render(&r)
+			wg.Done()
+		}()
 	}
 
-	log.Printf("生成%d个文件 %s, 耗时：%s",
-		c.config.GenFileNumber,
-		FormatBites(float64(c.config.GenFileSize)),
-		TimeSince(t1))
-
-	c.config.callbacks.Call(CallbackFinished, nil)
+	wg.Wait()
+	c.config.callbacks.Call(CallbackFinished, event)
 	return nil
 }
 
@@ -148,16 +146,6 @@ func (c *Chip) initRoute() error {
 		for key, fn := range c.filter {
 			c.config.Engine.AddGlobalFunc(key, fn)
 		}
-	}
-
-	for _, r := range c.config.Routes {
-		r.Init(c.config)
-		fn, ok := c.route[r.Name]
-		if ok {
-			fn(r.DataSource)
-		}
-
-		c.routes[r.Name] = r
 	}
 
 	c.inited = true

@@ -9,6 +9,17 @@ import (
 	"github.com/otiai10/copy"
 )
 
+// Loop 循环渲染函数
+type Loop map[string]func(s *Route)
+
+func (l *Loop) Add(path string, fn func(s *Route)) {
+	if *l == nil {
+		*l = make(map[string]func(s *Route))
+	}
+
+	(*l)[path] = fn
+}
+
 type Route struct {
 	Name     string `yaml:"name" json:"name"`
 	Route    string `yaml:"route" json:"route"`       //路由
@@ -18,11 +29,12 @@ type Route struct {
 	HtmlFile    string //生成的html文件相对路径
 	HtmlAbsFile string //生成的html绝对路径
 
-	LoopCount int //循环次数
+	*DataSource
 
-	Event      *Event
-	Sites      *sites
-	DataSource *DataSource
+	Event *Event
+	Sites *sites
+
+	Looper func(*Loop)
 
 	workerPath string
 
@@ -37,7 +49,6 @@ func (p *Route) Init(sites *sites) {
 		p.DataSource = &DataSource{}
 	}
 
-	p.DataSource.Route = p
 	workPath, err := os.Getwd()
 	if err != nil {
 		log.Printf("获取工作路径失败:%s", err.Error())
@@ -90,6 +101,10 @@ func (p *Route) Init(sites *sites) {
 			p.urlMap.Set(match[1], pReg)
 		}
 	}
+}
+
+func (p *Route) Loop(f func(l *Loop)) {
+	p.Looper = f
 }
 
 func (p *Route) Log() {

@@ -23,9 +23,6 @@ type sites struct {
 
 	copyRes bool //是否copy静态资源
 
-	GenFileSize   int64 //生成文件大小
-	GenFileNumber int   //生成文件个数
-
 	callbacks callbacks
 
 	Datasource map[string]func(s *DataSource)

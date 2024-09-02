@@ -6,10 +6,12 @@ import (
 	"time"
 )
 
-func TimeSince(t time.Time) string {
-	now := time.Now()
-	duration := now.Sub(t)
+func TimeSince(start, end time.Time) string {
+	if start.IsZero() {
+		return "-"
+	}
 
+	duration := start.Sub(end)
 	seconds := int(duration.Seconds())
 	minutes := int(duration.Minutes())
 	hours := int(duration.Hours())

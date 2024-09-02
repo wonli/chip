@@ -16,15 +16,15 @@ func main() {
 	}
 
 	ch.AddRender("a", &A{})
-	ch.Route("index", func(s *chip.DataSource) {
+	ch.Route("index", func(s *chip.Route) {
 		s.Payload.Set("hello", "Hello World!")
 	})
 
-	ch.Route("detail", func(s *chip.DataSource) {
+	ch.Route("detail", func(s *chip.Route) {
 		s.Loop(func(fn *chip.Loop) {
 			for _, i := range []int{1, 2, 3, 4} {
 				id := fmt.Sprintf("%d", i)
-				fn.Add(id, func(s *chip.DataSource) {
+				fn.Add(id, func(s *chip.Route) {
 					s.Payload.Set("id", i)
 					s.Payload.Set("name", fmt.Sprintf("name~%d", i))
 				})
@@ -32,19 +32,19 @@ func main() {
 		})
 	})
 
-	ch.Route("tags", func(s *chip.DataSource) {
+	ch.Route("tags", func(s *chip.Route) {
 		s.Payload.Set("id", 9527)
 		s.Payload.Set("name", "你好")
 	})
 
-	ch.Route("tag", func(s *chip.DataSource) {
+	ch.Route("tag", func(s *chip.Route) {
 		s.Loop(func(l *chip.Loop) {
-			l.Add("1", func(s *chip.DataSource) {
+			l.Add("1", func(s *chip.Route) {
 				s.Payload.Set("name", "王先生")
 				s.Payload.Set("city", "成都")
 			})
 
-			l.Add("2", func(s *chip.DataSource) {
+			l.Add("2", func(s *chip.Route) {
 				s.Payload.Set("name", "哆哆")
 				s.Payload.Set("city", "北京")
 			})

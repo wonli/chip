@@ -7,7 +7,7 @@ var (
 	CallbackFinished CallbackType = "finish"
 )
 
-type callbacks map[CallbackType]func(r *Route)
+type callbacks map[CallbackType]func(r *Event)
 
 func (c *callbacks) Get(key CallbackType) (any, bool) {
 	if *c == nil {
@@ -18,15 +18,15 @@ func (c *callbacks) Get(key CallbackType) (any, bool) {
 	return val, ok
 }
 
-func (c *callbacks) Set(name CallbackType, val func(r *Route)) {
+func (c *callbacks) Set(name CallbackType, val func(r *Event)) {
 	if *c == nil {
-		*c = make(map[CallbackType]func(r *Route))
+		*c = make(map[CallbackType]func(r *Event))
 	}
 
 	(*c)[name] = val
 }
 
-func (c *callbacks) Call(name CallbackType, route *Route) {
+func (c *callbacks) Call(name CallbackType, event *Event) {
 	if *c == nil {
 		return
 	}
@@ -36,5 +36,5 @@ func (c *callbacks) Call(name CallbackType, route *Route) {
 		return
 	}
 
-	fn(route)
+	fn(event)
 }
