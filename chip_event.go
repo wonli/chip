@@ -27,6 +27,10 @@ func (e *Event) GenCount() int {
 }
 
 func (e *Event) LoopCount() int {
+	if e.loopCount < e.genCount {
+		return e.genCount
+	}
+
 	return e.loopCount
 }
 
@@ -39,7 +43,7 @@ func (e *Event) Log() {
 	log.Printf("Success: %s %s (%d/%d)",
 		lastFile.file,
 		FormatBites(float64(lastFile.size)),
-		e.genCount,
-		e.loopCount,
+		e.GenCount(),
+		e.LoopCount(),
 	)
 }

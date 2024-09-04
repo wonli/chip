@@ -10,9 +10,9 @@ import (
 )
 
 func render(route *Route) {
-	distPath := route.Sites.HtmlAbsPath
-	if distPath == "" {
-		distPath = "."
+	distFile := route.Sites.HtmlAbsPath
+	if distFile == "" {
+		distFile = "."
 	}
 
 	if strings.Contains(route.urlRule, "%s") {
@@ -26,56 +26,36 @@ func render(route *Route) {
 		if len(loops) > 0 {
 			route.Event.loopCount = len(loops)
 			for p, fn := range loops {
-				fn(route)
+				rr := *route
+				fn(&rr)
 
-				routeGenFile := fmt.Sprintf(route.urlRule, fmt.Sprintf("%s", p))
-				route.genFile = routeGenFile
+				rr.genFile = fmt.Sprintf(rr.urlRule, fmt.Sprintf("%s", p))
+				distGenFile := filepath.Join(distFile, rr.genFile)
 
-				loopDistPath := filepath.Join(distPath, routeGenFile)
-				distDir := filepath.Dir(loopDistPath)
-				err2 := os.MkdirAll(distDir, 0755)
-				if err2 != nil {
-					log.Fatalf("生成目标目录失败:%s", err2.Error())
-				}
-
-				renderFile(route, loopDistPath)
+				renderFile(&rr, distGenFile)
 			}
 		}
 
 		return
 	}
 
-	err := os.MkdirAll(distPath, 0755)
-	if err != nil {
-		log.Printf("创建文件出错:%s", err.Error())
-		return
-	}
-
 	if route.urlRule == "/" {
 		route.genFile = "index.html"
-		distPath = filepath.Join(distPath, "index.html")
+		distFile = filepath.Join(distFile, "index.html")
 	} else {
 		route.genFile = route.urlRule
-		distPath = filepath.Join(distPath, route.urlRule)
+		distFile = filepath.Join(distFile, route.urlRule)
 	}
 
-	renderFile(route, distPath)
+	renderFile(route, distFile)
 }
 
-func renderFile(route *Route, distPath string) {
+func renderFile(route *Route, distFile string) {
 	tpl, err := route.Sites.Engine.GetTemplate(route.Template)
 	if err != nil {
 		log.Panicf("jet: %s", err.Error())
 		return
 	}
-
-	file, err := os.Create(distPath)
-	if err != nil {
-		log.Panicf("处理文件出错:%s", err.Error())
-		return
-	}
-
-	defer file.Close()
 
 	var buf bytes.Buffer
 	err = tpl.Execute(&buf, nil, route.DataSource.Payload)
@@ -84,43 +64,50 @@ func renderFile(route *Route, distPath string) {
 		return
 	}
 
+	htmlContent := buf.String()
 	if route.Sites.Minifyer != nil {
-		minifiedHTML, err2 := route.Sites.Minifyer.String("text/html", buf.String())
-		if err2 != nil {
-			log.Panicf("压缩HTML出错: %s", err2.Error())
-			return
-		}
-
-		_, err = file.WriteString(minifiedHTML)
-		if err != nil {
-			log.Panicf("写入压缩HTML出错: %s", err.Error())
-			return
-		}
-	} else {
-		_, err = file.Write(buf.Bytes())
-		if err != nil {
-			log.Panicf("写入HTML出错: %s", err.Error())
+		if htmlContent, err = route.Sites.Minifyer.String("text/html", htmlContent); err != nil {
+			log.Printf("压缩HTML出错: %s", err.Error())
 			return
 		}
 	}
 
-	// 获取文件信息
-	fi, err := file.Stat()
+	distDir := filepath.Dir(distFile)
+	err = os.MkdirAll(distDir, 0755)
 	if err != nil {
-		log.Printf("获取文件信息失败: %s", err.Error())
+		log.Printf("创建目录出错:%s", err.Error())
 		return
 	}
 
-	// html信息
+	// 直接打开目标文件进行写入
+	file, err := os.Create(distFile)
+	if err != nil {
+		log.Printf("创建目标文件失败: %s", err.Error())
+		return
+	}
+	defer file.Close()
+
+	if _, err = file.WriteString(htmlContent); err != nil {
+		log.Panicf("写入HTML到目标文件出错: %s", err.Error())
+		return
+	}
+
+	fi, err := file.Stat()
+	if err != nil {
+		log.Panicf("获取目标文件信息失败: %s", err.Error())
+		return
+	}
+
+	// 更新HTML信息
 	route.HtmlSize = fi.Size()
-	route.HtmlAbsFile = distPath
+	route.HtmlAbsFile = distFile
 	route.HtmlFile = filepath.Join(route.Sites.HtmlPath, route.genFile)
 
 	// 更新生成数据
 	route.Event.genCount++
 	route.Event.genFileSize += fi.Size()
 	route.Event.genFiles = append(route.Event.genFiles, genFile{
-		path: distPath,
+		path: distFile,
 		file: route.HtmlFile,
 		size: route.HtmlSize,
 	})
