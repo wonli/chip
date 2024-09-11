@@ -1,7 +1,6 @@
 package chip
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,7 +50,7 @@ func (p *Route) Init(sites *sites) {
 
 	workPath, err := os.Getwd()
 	if err != nil {
-		log.Printf("获取工作路径失败:%s", err.Error())
+		logger.Panicf("获取工作路径失败:%s", err.Error())
 		return
 	}
 
@@ -74,7 +73,7 @@ func (p *Route) Init(sites *sites) {
 		base := filepath.Base(sites.StaticAbsPath)
 		err = copy.Copy(sites.StaticAbsPath, filepath.Join(sites.HtmlAbsPath, base))
 		if err != nil {
-			log.Panicln("copy静态资源失败")
+			logger.Panicf("copy静态资源失败")
 			return
 		}
 
@@ -113,5 +112,5 @@ func (p *Route) Log() {
 	}
 
 	fileSize := float64(p.HtmlSize) / 1024.0
-	log.Printf("生成文件成功... %s (%.2fkb)", p.HtmlFile, fileSize)
+	logger.Infof("生成文件成功... %s (%.2fkb)", p.HtmlFile, fileSize)
 }

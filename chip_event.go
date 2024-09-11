@@ -1,7 +1,6 @@
 package chip
 
 import (
-	"log"
 	"net/http"
 )
 
@@ -40,7 +39,7 @@ func (e *Event) Log() {
 	}
 
 	lastFile := e.genFiles[len(e.genFiles)-1]
-	log.Printf("Success: %s %s (%d/%d)",
+	logger.Infof("Success: %s %s (%d/%d)",
 		lastFile.file,
 		FormatBites(float64(lastFile.size)),
 		e.GenCount(),

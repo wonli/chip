@@ -32,7 +32,7 @@ func (r Routers) Add(name string, fn ...HandlerFunc) {
 
 	has := r.manager.Has(name)
 	if has {
-		panic("Duplicate route: " + name)
+		logger.Panicf("Duplicate route: %s", name)
 	}
 
 	chains := make(HandlersChain, len(r.handlerMembers), len(r.handlerMembers)+len(fn))

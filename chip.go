@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/CloudyKit/jet/v6"
 	"gopkg.in/yaml.v3"
@@ -13,20 +14,19 @@ type Chip struct {
 	route  map[string]func(s *Route)
 	render map[string]any
 	filter map[string]jet.Func
-
 	Events chan *Event
-
 	inited bool
 	config *sites
+
+	logger Logger
 }
 
 func Use() *Chip {
 	c := &Chip{
 		route:  make(map[string]func(s *Route)),
-		Events: make(chan *Event, 1024),
 		render: make(map[string]any),
+		Events: make(chan *Event, 1024),
 	}
-
 	return c
 }
 
@@ -36,7 +36,6 @@ func (c *Chip) Config(site []byte) error {
 	if err != nil {
 		return err
 	}
-
 	c.config = &conf
 	return nil
 }
@@ -46,7 +45,6 @@ func (c *Chip) ConfigFile(file string) error {
 	if err != nil {
 		return err
 	}
-
 	return c.Config(conf)
 }
 
@@ -66,19 +64,31 @@ func (c *Chip) On(t CallbackType, fn func(r *Event)) {
 	c.config.callbacks.Set(t, fn)
 }
 
+func (c *Chip) Logger(logger Logger) {
+	setLogger(logger)
+}
+
 func (c *Chip) Server() {
+	timer := time.NewTimer(time.Second * 10)
+	defer timer.Stop()
+
 	for {
 		select {
 		case event := <-c.Events:
 			if event == nil {
+				logger.Info("事件为空，跳过...")
 				continue
 			}
 
 			err := c.Gen(event)
 			if err != nil {
-				fmt.Printf("执行失败:%s", err.Error())
+				logger.Errorf("执行失败:%s", err.Error())
 				continue
 			}
+
+		case <-timer.C:
+			logger.Infof("wait...queue length: %d", len(c.Events))
+			timer.Reset(time.Second * 10)
 		}
 	}
 }
@@ -109,16 +119,14 @@ func (c *Chip) Gen(event *Event) error {
 		}
 
 		wg.Add(1)
-		go func() {
+		go func(r Route) {
+			defer wg.Done()
 			if fn, ok := c.route[r.Name]; ok {
 				fn(&r)
 			}
-
 			render(&r)
-			wg.Done()
-		}()
+		}(r)
 	}
-
 	wg.Wait()
 	c.config.callbacks.Call(CallbackFinished, event)
 	return nil
