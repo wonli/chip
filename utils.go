@@ -8,10 +8,10 @@ import (
 
 func TimeSince(start, end time.Time) string {
 	if start.IsZero() {
-		return "-"
+		return ""
 	}
 
-	duration := start.Sub(end)
+	duration := end.Sub(start)
 	seconds := int(duration.Seconds())
 	minutes := int(duration.Minutes())
 	hours := int(duration.Hours())
@@ -22,7 +22,7 @@ func TimeSince(start, end time.Time) string {
 	} else if seconds < 60 {
 		return fmt.Sprintf("%d秒", seconds)
 	} else if minutes < 60 {
-		return fmt.Sprintf("%d分钟%d秒", minutes, seconds%60)
+		return fmt.Sprintf("%d分%d秒", minutes, seconds%60)
 	} else if hours < 24 {
 		return fmt.Sprintf("%d小时%d分钟", hours, minutes%60)
 	} else {

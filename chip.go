@@ -3,7 +3,6 @@ package chip
 import (
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/CloudyKit/jet/v6"
@@ -25,7 +24,7 @@ func Use() *Chip {
 	c := &Chip{
 		route:  make(map[string]func(s *Route)),
 		render: make(map[string]any),
-		Events: make(chan *Event, 1024),
+		Events: make(chan *Event, 256),
 	}
 	return c
 }
@@ -87,7 +86,6 @@ func (c *Chip) Server() {
 			}
 
 		case <-timer.C:
-			logger.Infof("wait...queue length: %d", len(c.Events))
 			timer.Reset(time.Second * 10)
 		}
 	}
@@ -99,7 +97,11 @@ func (c *Chip) Gen(event *Event) error {
 		return err
 	}
 
-	var wg sync.WaitGroup
+	if event == nil {
+		event = &Event{}
+	}
+
+	event.startAt = time.Now()
 	for _, route := range c.config.Routes {
 		r := Route{
 			Name:     route.Name,
@@ -109,26 +111,20 @@ func (c *Chip) Gen(event *Event) error {
 		}
 
 		r.Init(c.config)
-		if event != nil {
-			if route.Name != event.Route {
-				continue
-			}
-
-			r.Event = event
-			r.DataSource.Request = event.Request
+		if event.Route != "" && route.Name != event.Route {
+			continue
 		}
 
-		wg.Add(1)
-		go func(r Route) {
-			defer wg.Done()
-			if fn, ok := c.route[r.Name]; ok {
-				fn(&r)
-			}
-			render(&r)
-		}(r)
+		r.Event = event
+		r.DataSource.Request = event.Request
+
+		if fn, ok := c.route[r.Name]; ok {
+			fn(&r)
+		}
+
+		render(&r)
 	}
-	wg.Wait()
-	c.config.callbacks.Call(CallbackFinished, event)
+
 	return nil
 }
 

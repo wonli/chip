@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 func render(route *Route) {
@@ -22,22 +24,33 @@ func render(route *Route) {
 
 		loops := make(Loop)
 		route.Looper(&loops)
+
 		if len(loops) > 0 {
-			route.Event.loopCount = len(loops)
+			var wg sync.WaitGroup
+			route.Event.LoopCount += len(loops)
 			for p, fn := range loops {
-				rr := *route
-				fn(&rr)
+				wg.Add(1)
+				go func(p string, rr Route, fn func(r *Route)) {
+					rr.Event = route.Event
+					dataSource := *route.DataSource
+					rr.DataSource = &dataSource
 
-				rr.genFile = fmt.Sprintf(rr.urlRule, fmt.Sprintf("%s", p))
-				distGenFile := filepath.Join(distFile, rr.genFile)
+					fn(&rr)
 
-				renderFile(&rr, distGenFile)
+					rr.genFile = fmt.Sprintf(rr.urlRule, fmt.Sprintf("%s", p))
+					distGenFile := filepath.Join(distFile, rr.genFile)
+					renderFile(&rr, distGenFile)
+					wg.Done()
+				}(p, *route, fn)
 			}
+
+			wg.Wait()
 		}
 
 		return
 	}
 
+	route.Event.LoopCount += 1
 	if route.urlRule == "/" {
 		route.genFile = "index.html"
 		distFile = filepath.Join(distFile, "index.html")
@@ -103,14 +116,19 @@ func renderFile(route *Route, distFile string) {
 	route.HtmlFile = filepath.Join(route.Sites.HtmlPath, route.genFile)
 
 	// 更新生成数据
-	route.Event.genCount++
-	route.Event.genFileSize += fi.Size()
-	route.Event.genFiles = append(route.Event.genFiles, genFile{
+	route.Event.GenCount++
+	route.Event.GenFileSize += fi.Size()
+	route.Event.GenFiles = append(route.Event.GenFiles, genFile{
 		path: distFile,
 		file: route.HtmlFile,
 		size: route.HtmlSize,
 	})
 
 	// 回调
-	route.Sites.callbacks.Call(CallbackGen, route.Event)
+	event := route.Event.DeepCopy()
+	route.Sites.callbacks.Call(CallbackGen, event)
+	if route.Event.GenCount >= route.Event.LoopCount {
+		route.Event.endAt = time.Now()
+		route.Sites.callbacks.Call(CallbackFinished, route.Event)
+	}
 }
