@@ -31,6 +31,10 @@ func TimeSince(start, end time.Time) string {
 }
 
 func FormatBites(size float64) string {
+	if size <= 0 {
+		return ""
+	}
+
 	unit := []string{"B", "KB", "MB", "GB", "TB", "PB"}
 	s := math.Floor(math.Log(size) / math.Log(1024))
 	i := int(s)

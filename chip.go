@@ -24,7 +24,7 @@ func Use() *Chip {
 	c := &Chip{
 		route:  make(map[string]func(s *Route)),
 		render: make(map[string]any),
-		Events: make(chan *Event, 256),
+		Events: make(chan *Event, 32),
 	}
 	return c
 }
@@ -74,27 +74,23 @@ func (c *Chip) Server() {
 	for {
 		select {
 		case event := <-c.Events:
-			if event == nil {
+			if event == nil || event.Route == "" {
 				logger.Info("事件为空，跳过...")
 				continue
 			}
 
-			err := c.Gen(event)
-			if err != nil {
-				logger.Errorf("执行失败:%s", err.Error())
-				continue
-			}
-
+			go c.Gen(event)
 		case <-timer.C:
 			timer.Reset(time.Second * 10)
 		}
 	}
 }
 
-func (c *Chip) Gen(event *Event) error {
+func (c *Chip) Gen(event *Event) {
 	err := c.initRoute()
 	if err != nil {
-		return err
+		event.Error = err
+		return
 	}
 
 	if event == nil {
@@ -124,8 +120,6 @@ func (c *Chip) Gen(event *Event) error {
 
 		render(&r)
 	}
-
-	return nil
 }
 
 func (c *Chip) initRoute() error {

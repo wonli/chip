@@ -11,6 +11,10 @@ import (
 )
 
 func render(route *Route) {
+	if route.inStream {
+		return
+	}
+
 	distFile := route.Sites.HtmlAbsPath
 	if distFile == "" {
 		distFile = "."
@@ -79,8 +83,7 @@ func renderFile(route *Route, distFile string) {
 	htmlContent := buf.String()
 	if route.Sites.Minifyer != nil {
 		if htmlContent, err = route.Sites.Minifyer.String("text/html", htmlContent); err != nil {
-			logger.Panicf("压缩HTML出错: %s", err.Error())
-			return
+			logger.Infof("压缩HTML出错: %s %s", distFile, err.Error())
 		}
 	}
 
@@ -124,10 +127,10 @@ func renderFile(route *Route, distFile string) {
 		size: route.HtmlSize,
 	})
 
-	// 回调
+	// 事件回调
 	event := route.Event.DeepCopy()
 	route.Sites.callbacks.Call(CallbackGen, event)
-	if route.Event.GenCount >= route.Event.LoopCount {
+	if !route.inStream && route.Event.GenCount >= route.Event.LoopCount {
 		route.Event.endAt = time.Now()
 		route.Sites.callbacks.Call(CallbackFinished, route.Event)
 	}

@@ -51,11 +51,7 @@ func main() {
 		})
 	})
 
-	err = ch.Gen(nil)
-	if err != nil {
-		log.Panicln(err.Error())
-		return
-	}
+	ch.Gen(nil)
 }
 
 type A struct {

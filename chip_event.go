@@ -21,6 +21,9 @@ type Event struct {
 	GenFiles    []genFile //生成的文件
 	LoopCount   int       //总循环次数
 
+	Error  error
+	Stream bool
+
 	startAt time.Time
 	endAt   time.Time
 }
@@ -43,11 +46,16 @@ func (e *Event) Log() {
 		return
 	}
 
+	loopCount := e.LoopCount
+	if loopCount < e.GenCount {
+		loopCount = e.GenCount
+	}
+
 	lastFile := e.GenFiles[len(e.GenFiles)-1]
 	logger.Infof("生成: %s %s (%d/%d)",
 		lastFile.file,
 		FormatBites(float64(lastFile.size)),
 		e.GenCount,
-		e.LoopCount,
+		loopCount,
 	)
 }

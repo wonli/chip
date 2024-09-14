@@ -1,9 +1,11 @@
 package chip
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/otiai10/copy"
 )
@@ -36,6 +38,8 @@ type Route struct {
 	Looper func(*Loop)
 
 	workerPath string
+
+	inStream bool
 
 	genFile string //生成文件名
 	urlRule string
@@ -104,6 +108,29 @@ func (p *Route) Init(sites *sites) {
 
 func (p *Route) Loop(f func(l *Loop)) {
 	p.Looper = f
+}
+
+func (p *Route) Stream(path string, fn func(s *Route)) {
+	p.inStream = true
+	p.Event.Stream = true
+	p.genFile = fmt.Sprintf(p.urlRule, fmt.Sprintf("%s", path))
+	distFile := p.Sites.HtmlAbsPath
+	if distFile == "" {
+		distFile = "."
+	}
+
+	fn(p)
+	distFile = filepath.Join(distFile, p.genFile)
+	renderFile(p, distFile)
+}
+
+func (p *Route) Completed() {
+	if !p.inStream {
+		return
+	}
+
+	p.Event.endAt = time.Now()
+	p.Sites.callbacks.Call(CallbackFinished, p.Event)
 }
 
 func (p *Route) Log() {
