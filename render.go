@@ -80,6 +80,11 @@ func renderFile(route *Route, distFile string) {
 		return
 	}
 
+	if route.skipRender {
+		route.skipRender = false
+		return
+	}
+
 	htmlContent := buf.String()
 	if route.Sites.Minifyer != nil {
 		if htmlContent, err = route.Sites.Minifyer.String("text/html", htmlContent); err != nil {

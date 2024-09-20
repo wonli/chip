@@ -39,7 +39,8 @@ type Route struct {
 
 	workerPath string
 
-	inStream bool
+	inStream   bool
+	skipRender bool
 
 	genFile string //生成文件名
 	urlRule string
@@ -122,6 +123,14 @@ func (p *Route) Stream(path string, fn func(s *Route)) {
 	fn(p)
 	distFile = filepath.Join(distFile, p.genFile)
 	renderFile(p, distFile)
+}
+
+func (p *Route) Rerender() {
+	p.skipRender = false
+}
+
+func (p *Route) SkipRender() {
+	p.skipRender = true
 }
 
 func (p *Route) Completed() {
