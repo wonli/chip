@@ -10,10 +10,12 @@ import (
 )
 
 type Chip struct {
-	route  map[string]func(s *Route)
+	Event  *Event
+	Events chan *Event
+
+	routes map[string]func(s *Route)
 	render map[string]any
 	filter map[string]jet.Func
-	Events chan *Event
 	inited bool
 	config *sites
 
@@ -22,7 +24,7 @@ type Chip struct {
 
 func Use() *Chip {
 	c := &Chip{
-		route:  make(map[string]func(s *Route)),
+		routes: make(map[string]func(s *Route)),
 		render: make(map[string]any),
 		Events: make(chan *Event, 32),
 	}
@@ -56,7 +58,7 @@ func (c *Chip) AddFilter(key string, fn jet.Func) {
 }
 
 func (c *Chip) Route(name string, fn func(s *Route)) {
-	c.route[name] = fn
+	c.routes[name] = fn
 }
 
 func (c *Chip) On(t CallbackType, fn func(r *Event)) {
@@ -79,6 +81,7 @@ func (c *Chip) Server() {
 				continue
 			}
 
+			c.Event = event
 			go c.Gen(event)
 		case <-timer.C:
 			timer.Reset(time.Second * 10)
@@ -114,12 +117,28 @@ func (c *Chip) Gen(event *Event) {
 		r.Event = event
 		r.DataSource.Request = event.Request
 
-		if fn, ok := c.route[r.Name]; ok {
+		if fn, ok := c.routes[r.Name]; ok {
 			fn(&r)
 		}
 
 		render(&r)
 	}
+}
+
+func (c *Chip) GetEventRoute() *Route {
+	if c.Event == nil {
+		return nil
+	}
+
+	var route *Route
+	for _, r := range c.config.Routes {
+		if r.Name == c.Event.Route {
+			route = r
+			break
+		}
+	}
+
+	return route
 }
 
 func (c *Chip) initRoute() error {
