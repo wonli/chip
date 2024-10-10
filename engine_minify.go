@@ -12,8 +12,8 @@ import (
 	"github.com/tdewolff/minify/v2/xml"
 )
 
-func minifyInit(conf *sites) *minify.M {
-	if !conf.Minify {
+func minifyInit(chip *Chip) *minify.M {
+	if !chip.config.Minify {
 		return nil
 	}
 

@@ -9,10 +9,10 @@ import (
 var jetSet *jet.Set
 var once sync.Once
 
-func jetInit(sites *sites) *jet.Set {
+func jetInit(chip *Chip) *jet.Set {
 	once.Do(func() {
 		jetSet = jet.NewSet(jet.NewOSFileSystemLoader("."), jet.InDevelopmentMode())
-		jetSet.AddGlobal("to", &To{Sites: sites})
+		jetSet.AddGlobal("f", Format{chip: chip})
 	})
 
 	return jetSet

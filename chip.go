@@ -151,8 +151,8 @@ func (c *Chip) initRoute() error {
 	}
 
 	//注册渲染和压缩
-	c.config.Engine = jetInit(c.config)
-	c.config.Minifyer = minifyInit(c.config)
+	c.config.Engine = jetInit(c)
+	c.config.Minifyer = minifyInit(c)
 	if c.render != nil && len(c.render) > 0 {
 		for key, fn := range c.render {
 			c.config.Engine.AddGlobal(key, fn)
