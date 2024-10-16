@@ -63,6 +63,10 @@ func (f Format) Strips(s string) string {
 
 func (f Format) Res(assets string) string {
 	rr := f.chip.GetEventRoute()
+	if rr == nil {
+		return assets
+	}
+
 	directoryPath := rr.Route
 	if strings.HasPrefix(assets, "/") || directoryPath == "/" {
 		return assets

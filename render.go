@@ -127,9 +127,9 @@ func renderFile(route *Route, distFile string) {
 	route.Event.GenCount++
 	route.Event.GenFileSize += fi.Size()
 	route.Event.GenFiles = append(route.Event.GenFiles, genFile{
-		path: distFile,
-		file: route.HtmlFile,
-		size: route.HtmlSize,
+		Path: distFile,
+		File: route.HtmlFile,
+		Size: route.HtmlSize,
 	})
 
 	// 事件回调

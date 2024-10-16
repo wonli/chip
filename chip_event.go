@@ -6,9 +6,9 @@ import (
 )
 
 type genFile struct {
-	file string
-	path string
-	size int64
+	File string
+	Path string
+	Size int64
 }
 
 type Event struct {
@@ -53,8 +53,8 @@ func (e *Event) Log() {
 
 	lastFile := e.GenFiles[len(e.GenFiles)-1]
 	logger.Infof("生成: %s %s (%d/%d)",
-		lastFile.file,
-		FormatBites(float64(lastFile.size)),
+		lastFile.File,
+		FormatBites(float64(lastFile.Size)),
 		e.GenCount,
 		loopCount,
 	)

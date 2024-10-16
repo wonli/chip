@@ -125,6 +125,30 @@ func (c *Chip) Gen(event *Event) {
 	}
 }
 
+func (c *Chip) GenAll() {
+	_ = c.initRoute()
+	c.Event = &Event{
+		startAt: time.Now(),
+	}
+
+	for _, route := range c.config.Routes {
+		r := Route{
+			Name:     route.Name,
+			Route:    route.Route,
+			Template: route.Template,
+			Event:    &Event{},
+		}
+
+		r.Init(c.config)
+		c.Event.Route = route.Name
+		if fn, ok := c.routes[r.Name]; ok {
+			fn(&r)
+		}
+
+		render(&r)
+	}
+}
+
 func (c *Chip) GetEventRoute() *Route {
 	if c.Event == nil {
 		return nil
