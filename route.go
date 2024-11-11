@@ -5,30 +5,33 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/otiai10/copy"
 )
 
 // Loop 循环渲染函数
-type Loop map[string]func(s *Route)
+type Loop struct {
+	m  map[string]func(s *Route)
+	mu sync.RWMutex
+}
 
 func (l *Loop) Add(path string, fn func(s *Route)) {
-	if *l == nil {
-		*l = make(map[string]func(s *Route))
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if l.m == nil {
+		l.m = make(map[string]func(s *Route))
 	}
 
-	(*l)[path] = fn
+	l.m[path] = fn
 }
 
 type Route struct {
 	Name     string `yaml:"name" json:"name"`
 	Route    string `yaml:"route" json:"route"`       //路由
 	Template string `yaml:"template" json:"template"` //模版
-
-	HtmlSize    int64  //生成的html文件大小
-	HtmlFile    string //生成的html文件相对路径
-	HtmlAbsFile string //生成的html绝对路径
 
 	*DataSource
 
@@ -140,13 +143,4 @@ func (p *Route) Completed() {
 
 	p.Event.endAt = time.Now()
 	p.Sites.callbacks.Call(CallbackFinished, p.Event)
-}
-
-func (p *Route) Log() {
-	if p == nil {
-		return
-	}
-
-	fileSize := float64(p.HtmlSize) / 1024.0
-	logger.Infof("生成文件成功... %s (%.2fkb)", p.HtmlFile, fileSize)
 }

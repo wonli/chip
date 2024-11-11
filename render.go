@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -26,13 +27,13 @@ func render(route *Route) {
 			return
 		}
 
-		loops := make(Loop)
+		loops := Loop{}
 		route.Looper(&loops)
 
-		if len(loops) > 0 {
+		if loops.m != nil {
 			var wg sync.WaitGroup
-			route.Event.LoopCount += len(loops)
-			for p, fn := range loops {
+			route.Event.LoopCount += len(loops.m)
+			for p, fn := range loops.m {
 				wg.Add(1)
 				go func(p string, rr Route, fn func(r *Route)) {
 					rr.Event = route.Event
@@ -67,6 +68,7 @@ func render(route *Route) {
 }
 
 func renderFile(route *Route, distFile string) {
+
 	tpl, err := route.Sites.Engine.GetTemplate(route.Template)
 	if err != nil {
 		logger.Panicf("jet: %s", err.Error())
@@ -118,22 +120,22 @@ func renderFile(route *Route, distFile string) {
 		return
 	}
 
-	// 更新HTML信息
-	route.HtmlSize = fi.Size()
-	route.HtmlAbsFile = distFile
-	route.HtmlFile = filepath.Join(route.Sites.HtmlPath, route.genFile)
+	// 更新计数器
+	atomic.AddInt32(&route.Event.counter, 1)
+	counter := atomic.LoadInt32(&route.Event.counter)
 
 	// 更新生成数据
-	route.Event.GenCount++
+	route.Event.GenCount = int(counter)
 	route.Event.GenFileSize += fi.Size()
-	route.Event.GenFiles = append(route.Event.GenFiles, genFile{
-		Path: distFile,
-		File: route.HtmlFile,
-		Size: route.HtmlSize,
-	})
 
 	// 事件回调
 	event := route.Event.DeepCopy()
+	event.CurrentFile = GenFile{
+		Path: distFile,
+		File: filepath.Join(route.Sites.HtmlPath, route.genFile),
+		Size: fi.Size(),
+	}
+
 	route.Sites.callbacks.Call(CallbackGen, event)
 	if !route.inStream && route.Event.GenCount >= route.Event.LoopCount {
 		route.Event.endAt = time.Now()
